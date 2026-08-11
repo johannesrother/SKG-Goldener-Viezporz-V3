@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { SIDE_QUESTS } from '../data/chapter-one.js';
 import pavementLibraryUrl from '../assets/trier-pavement-material-library-v1.png';
 import slateRoofUrl from '../assets/trier-slate-roof.png';
+import { createHauptmarktAtelier } from './hauptmarkt-atelier.js';
 
 const PALETTE = {
   sandstone: [0xd6b27f, 0xc99165, 0xe0c599, 0xb98762, 0xd3a876],
@@ -3373,6 +3374,7 @@ export function createWorld(scene, quality = 'medium') {
   // shared character system as the crowd, so adding the story costs no new
   // world geometry or heavyweight character pipeline.
   const questFriends = createQuestFriends(root);
+  const hauptmarktAtelier = createHauptmarktAtelier(root, citizens, questFriends);
   // Optional encounters have their own compact presentation. They are not
   // part of the five-person story group and therefore never alter formation
   // or the main quest's target marker.
@@ -3784,6 +3786,7 @@ export function createWorld(scene, quality = 'medium') {
     citizens,
     visitorCount: citizens.length + Object.keys(sideQuestCharacters).length,
     questFriends,
+    setHauptmarktAtelier(enabled, player) { hauptmarktAtelier.setEnabled(enabled, player); },
     sideQuestCharacters,
     wineStandPoint,
     arrivalPoint,
