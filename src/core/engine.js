@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { PixelGraphics, normalizeGraphics } from './pixel-graphics.js';
 import { animateCharacterPose, createWorld, makePerson, setPersonStyle } from '../world/world.js';
 
 const OUTFITS = {
@@ -35,9 +36,10 @@ const WALK_ACCELERATION = 15;
 const WALK_DECELERATION = 11;
 
 export class GameEngine {
-  constructor(canvas, profile, callbacks = {}) {
+  constructor(canvas, profile, callbacks = {}, graphics = {}) {
     this.canvas = canvas;
     this.callbacks = callbacks;
+    this.graphics = normalizeGraphics(graphics);
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(-10, 10, 7, -7, .1, 120);
     this.camera.position.set(15, 22, 17);
@@ -46,7 +48,7 @@ export class GameEngine {
     this.camera.zoom = this.baseZoom;
     this.isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
     this.qualityProfile = this.chooseQualityProfile();
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.qualityProfile !== 'low', powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.graphics.style === 'modern' && this.qualityProfile !== 'low', powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // A quieter grade preserves the warm evening mood while giving the scene
@@ -55,7 +57,8 @@ export class GameEngine {
     this.renderer.shadowMap.enabled = this.qualityProfile !== 'low';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = true;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelRatio()));
+    this.pixelGraphics = new PixelGraphics(this.renderer, canvas, this.graphics);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelGraphics.pixelRatio(this.pixelRatio())));
     this.composer = this.createPostProcessing();
     this.clock = new THREE.Clock();
     this.raycaster = new THREE.Raycaster();
@@ -86,6 +89,7 @@ export class GameEngine {
     // existing, safely walkable part of the same continuous world.
     this.player.position.copy(this.world.arrivalPoint || new THREE.Vector3(-72, 0, 90));
     this.world.root.add(this.player);
+    this.pixelGraphics.apply(this.scene);
     this.resize();
     this.bindInput();
     this.animate();
@@ -95,7 +99,7 @@ export class GameEngine {
     // Bloom is deliberately reserved for powerful desktop GPUs.  It gives
     // lanterns, windows and the late sun a soft cinematic lift without
     // compromising the responsive mobile profile.
-    if (this.qualityProfile !== 'high') return null;
+    if (this.qualityProfile !== 'high' || this.pixelGraphics?.enabled) return null;
     const composer = new EffectComposer(this.renderer);
     composer.addPass(new RenderPass(this.scene, this.camera));
     const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .19, .38, .86);
@@ -124,6 +128,14 @@ export class GameEngine {
     // The isometric view still reads crisply at these caps, while the lower
     // fill rate keeps the busy square responsive on notebooks and phones.
     return this.qualityProfile === 'high' ? 1.28 : this.qualityProfile === 'medium' ? (this.isTouchDevice ? .9 : 1.05) : .82;
+  }
+
+  setGraphicsSettings(graphics) {
+    this.graphics = normalizeGraphics(graphics);
+    this.pixelGraphics.setSettings(this.graphics, this.scene);
+    this.composer?.dispose();
+    this.composer = this.createPostProcessing();
+    this.resize();
   }
 
   getPosition() {
@@ -267,6 +279,7 @@ export class GameEngine {
     const width = this.canvas.clientWidth || window.innerWidth;
     const height = this.canvas.clientHeight || window.innerHeight;
     this.baseZoom = width < 620 ? .86 : this.isTouchDevice && width < 900 ? .93 : 1.0;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelGraphics.pixelRatio(this.pixelRatio())));
     this.renderer.setSize(width, height, false);
     const aspect = width / height;
     // A closer default makes the real façades, tables and visitors legible;
@@ -278,7 +291,7 @@ export class GameEngine {
     this.camera.bottom = -viewHeight / 2;
     this.camera.updateProjectionMatrix();
     if (this.composer) {
-      this.composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelRatio()));
+      this.composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelGraphics.pixelRatio(this.pixelRatio())));
       this.composer.setSize(width, height);
     }
   }
