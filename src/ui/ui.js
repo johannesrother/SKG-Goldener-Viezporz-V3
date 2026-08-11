@@ -1,8 +1,11 @@
+import { DEFAULT_GRAPHICS, normalizeGraphics, PIXEL_QUALITIES, PIXEL_STYLES } from '../core/pixel-graphics.js';
+
 export class GameUI {
   constructor(app, callbacks = {}) {
     this.app = app;
     this.callbacks = callbacks;
     this.profile = { name: 'Johannes', outfit: 'dunkelgruen', hair: 'braun' };
+    this.graphics = { ...DEFAULT_GRAPHICS };
     this.mainQuest = null;
     this.sideQuests = [];
     this.visitedLocations = new Set();
@@ -54,6 +57,21 @@ export class GameUI {
                 <button id="menu-settings" type="button">Einstellungen</button>
                 <button id="menu-credits" type="button">Credits</button>
               </div>
+              <section class="graphics-settings hidden" id="graphics-settings" aria-label="Grafikeinstellungen">
+                <p>2.5D Pixel-Look</p>
+                <div class="graphics-choices" data-graphics-field="style" role="radiogroup" aria-label="Pixel-Stil">
+                  <button data-value="soft" type="button">Pixel Soft</button>
+                  <button data-value="classic" type="button">Pixel Classic</button>
+                  <button data-value="sharp" type="button">Pixel Sharp</button>
+                  <button data-value="modern" type="button">Modern 3D</button>
+                </div>
+                <div class="graphics-choices" data-graphics-field="quality" role="radiogroup" aria-label="Pixel-Qualität">
+                  <button data-value="low" type="button">2.5D Pixel – Low</button>
+                  <button data-value="medium" type="button">2.5D Pixel – Medium</button>
+                  <button data-value="high" type="button">2.5D Pixel – High</button>
+                </div>
+                <small id="graphics-summary"></small>
+              </section>
               <p class="menu-message" id="menu-message" aria-live="polite">Deine Auswahl wird automatisch gespeichert.</p>
             </section>
             <aside class="menu-character-stage" aria-label="Charaktervorschau">
@@ -127,6 +145,8 @@ export class GameUI {
       settings: this.app.querySelector('#menu-settings'),
       credits: this.app.querySelector('#menu-credits'),
       menuMessage: this.app.querySelector('#menu-message'),
+      graphicsSettings: this.app.querySelector('#graphics-settings'),
+      graphicsSummary: this.app.querySelector('#graphics-summary'),
       map: this.app.querySelector('#city-map'),
       openMap: this.app.querySelector('#open-map'),
       closeMap: this.app.querySelector('#close-map'),
@@ -173,13 +193,20 @@ export class GameUI {
     });
     this.elements.startButton.addEventListener('click', () => this.callbacks.onStart?.({ ...this.profile, name: this.elements.name.value.trim() || 'Gast' }));
     this.elements.settings.addEventListener('click', () => {
-      this.elements.menuMessage.textContent = 'Einstellungen: Grafik wird automatisch an dein Gerät angepasst. Audio startet nach deiner ersten Eingabe.';
+      const isClosed = this.elements.graphicsSettings.classList.toggle('hidden');
+      this.elements.menuMessage.textContent = isClosed ? 'Einstellungen geschlossen.' : 'Pixelmodus: klare Kanten, reduzierte Renderauflösung und bessere Performance.';
     });
     this.elements.credits.addEventListener('click', () => {
       this.elements.menuMessage.textContent = 'SKG · Auf der Suche nach dem Goldenen Viezporz · entwickelt für Trier.';
     });
     this.elements.start.addEventListener('pointerdown', () => this.callbacks.onMenuInteraction?.(), { once: true });
     this.elements.start.querySelectorAll('button').forEach((button) => button.addEventListener('mouseenter', () => this.callbacks.onMenuHover?.()));
+    this.app.querySelectorAll('[data-graphics-field] button').forEach((button) => button.addEventListener('click', () => {
+      this.graphics[button.parentElement.dataset.graphicsField] = button.dataset.value;
+      this.graphics = normalizeGraphics(this.graphics);
+      this.syncGraphicsControls();
+      this.callbacks.onGraphicsChange?.({ ...this.graphics });
+    }));
     this.elements.openMap.addEventListener('click', () => this.toggleMap());
     this.elements.closeMap.addEventListener('click', () => this.toggleMap(false));
     this.elements.interact.addEventListener('click', () => this.callbacks.onInteract?.());
@@ -230,7 +257,7 @@ export class GameUI {
     joystick.addEventListener('pointercancel', end);
   }
 
-  showStart(saved) {
+  showStart(saved, graphics = DEFAULT_GRAPHICS) {
     this.elements.boot.classList.add('hidden');
     if (saved) {
       const previousOutfits = { wald: 'dunkelgruen', blau: 'dunkelblau', kupfer: 'weinrot' };
@@ -244,6 +271,15 @@ export class GameUI {
       this.elements.name.value = this.profile.name;
       this.app.querySelectorAll('.menu-choices button').forEach((button) => button.classList.toggle('active', button.dataset.value === this.profile[button.parentElement.dataset.field]));
     }
+    this.graphics = normalizeGraphics(graphics);
+    this.syncGraphicsControls();
+  }
+
+  syncGraphicsControls() {
+    this.app.querySelectorAll('[data-graphics-field] button').forEach((button) => {
+      button.classList.toggle('active', button.dataset.value === this.graphics[button.parentElement.dataset.graphicsField]);
+    });
+    this.elements.graphicsSummary.textContent = `${PIXEL_STYLES[this.graphics.style].label} · ${PIXEL_QUALITIES[this.graphics.quality].label}`;
   }
 
   emitProfileChange() {
