@@ -2,9 +2,11 @@ import { GameEngine } from './core/engine.js';
 import { Soundscape } from './audio/soundscape.js';
 import { CityStrollQuest } from './quests/city-stroll.js';
 import { GameUI } from './ui/ui.js';
+import { DEFAULT_GRAPHICS, normalizeGraphics } from './core/pixel-graphics.js';
 import './styles.css';
 
 const PROFILE_KEY = 'skg-hauptmarkt-profile-v1';
+const GRAPHICS_KEY = 'skg-v3-pixel-graphics-v1';
 
 class HauptmarktSlice {
   constructor(app) {
@@ -13,6 +15,7 @@ class HauptmarktSlice {
     this.menuEngine = null;
     this.quest = null;
     this.chapterResult = null;
+    this.graphics = this.readGraphics();
     this.audio = new Soundscape(.4);
     this.lastUiUpdate = 0;
     this.ui = new GameUI(app, {
@@ -25,8 +28,9 @@ class HauptmarktSlice {
       onReturnToMenu: () => this.returnToMenu(),
       onFreeExplore: () => this.freeExplore(),
       onRestartDemo: () => this.restartDemo(),
+      onGraphicsChange: (graphics) => this.updateGraphics(graphics),
     });
-    this.ui.showStart(this.readProfile());
+    this.ui.showStart(this.readProfile(), this.graphics);
     this.startMenuScene(this.ui.profile);
   }
 
@@ -36,6 +40,14 @@ class HauptmarktSlice {
 
   persistProfile(profile) {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  }
+
+  readGraphics() {
+    try { return normalizeGraphics(JSON.parse(localStorage.getItem(GRAPHICS_KEY)) || DEFAULT_GRAPHICS); } catch { return { ...DEFAULT_GRAPHICS }; }
+  }
+
+  persistGraphics(graphics) {
+    localStorage.setItem(GRAPHICS_KEY, JSON.stringify(graphics));
   }
 
   activateMenuAudio() {
@@ -48,10 +60,17 @@ class HauptmarktSlice {
     this.menuEngine?.setPreviewStyle(profile);
   }
 
+  updateGraphics(graphics) {
+    this.graphics = normalizeGraphics(graphics);
+    this.persistGraphics(this.graphics);
+    this.menuEngine?.setGraphicsSettings(this.graphics);
+    this.engine?.setGraphicsSettings(this.graphics);
+  }
+
   startMenuScene(profile) {
     try {
       this.menuEngine?.destroy();
-      this.menuEngine = new GameEngine(this.ui.elements.canvas, profile);
+      this.menuEngine = new GameEngine(this.ui.elements.canvas, profile, {}, this.graphics);
       this.menuEngine.setMenuPresentation(true);
     } catch (error) {
       this.ui.showWebGLError(error);
@@ -73,7 +92,7 @@ class HauptmarktSlice {
           this.quest?.begin(this.engine?.clock.elapsedTime || 0);
         },
         onCinematicEnd: () => this.ui.showEnding(this.chapterResult),
-      });
+      }, this.graphics);
       this.ui.begin(profile, this.engine.world.visitorCount, true);
       this.quest = new CityStrollQuest({
         world: this.engine.world,
