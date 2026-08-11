@@ -211,7 +211,12 @@ function nearestCityColor(color) {
   let distance = Infinity;
   candidates.forEach((hex) => {
     const candidate = colorFromHex(hex);
-    const next = color.distanceToSquared(candidate);
+    // THREE.Color deliberately has no Vector-style distanceToSquared helper.
+    // Keep the palette lookup explicit so loading the art prototype can never
+    // prevent the WebGL scene from starting.
+    const next = (color.r - candidate.r) ** 2
+      + (color.g - candidate.g) ** 2
+      + (color.b - candidate.b) ** 2;
     if (next < distance) { winner = hex; distance = next; }
   });
   return colorFromHex(winner);
