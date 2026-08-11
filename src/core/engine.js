@@ -48,7 +48,7 @@ export class GameEngine {
     this.camera.zoom = this.baseZoom;
     this.isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
     this.qualityProfile = this.chooseQualityProfile();
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.graphics.style === 'modern' && this.qualityProfile !== 'low', powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.qualityProfile !== 'low', powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // A quieter grade preserves the warm evening mood while giving the scene
@@ -89,7 +89,8 @@ export class GameEngine {
     // existing, safely walkable part of the same continuous world.
     this.player.position.copy(this.world.arrivalPoint || new THREE.Vector3(-72, 0, 90));
     this.world.root.add(this.player);
-    this.pixelGraphics.apply(this.scene);
+    this.pixelGraphics.apply();
+    this.world.setHauptmarktAtelier?.(this.pixelGraphics.enabled, this.player);
     this.resize();
     this.bindInput();
     this.animate();
@@ -99,7 +100,7 @@ export class GameEngine {
     // Bloom is deliberately reserved for powerful desktop GPUs.  It gives
     // lanterns, windows and the late sun a soft cinematic lift without
     // compromising the responsive mobile profile.
-    if (this.qualityProfile !== 'high' || this.pixelGraphics?.enabled) return null;
+    if (this.qualityProfile !== 'high') return null;
     const composer = new EffectComposer(this.renderer);
     composer.addPass(new RenderPass(this.scene, this.camera));
     const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), .19, .38, .86);
@@ -132,7 +133,8 @@ export class GameEngine {
 
   setGraphicsSettings(graphics) {
     this.graphics = normalizeGraphics(graphics);
-    this.pixelGraphics.setSettings(this.graphics, this.scene);
+    this.pixelGraphics.setSettings(this.graphics);
+    this.world.setHauptmarktAtelier?.(this.pixelGraphics.enabled, this.player);
     this.composer?.dispose();
     this.composer = this.createPostProcessing();
     this.resize();
