@@ -58,17 +58,17 @@ export class GameUI {
                 <button id="menu-credits" type="button">Credits</button>
               </div>
               <section class="graphics-settings hidden" id="graphics-settings" aria-label="Grafikeinstellungen">
-                <p>2.5D Pixel-Look</p>
+                <p>2.5D Atelier · Hauptmarkt-Test</p>
                 <div class="graphics-choices" data-graphics-field="style" role="radiogroup" aria-label="Pixel-Stil">
-                  <button data-value="soft" type="button">Pixel Soft</button>
-                  <button data-value="classic" type="button">Pixel Classic</button>
-                  <button data-value="sharp" type="button">Pixel Sharp</button>
+                  <button data-value="soft" type="button">Atelier weich</button>
+                  <button data-value="classic" type="button">Atelier klassisch</button>
+                  <button data-value="sharp" type="button">Atelier kontrast</button>
                   <button data-value="modern" type="button">Modern 3D</button>
                 </div>
                 <div class="graphics-choices" data-graphics-field="quality" role="radiogroup" aria-label="Pixel-Qualität">
-                  <button data-value="low" type="button">2.5D Pixel – Low</button>
-                  <button data-value="medium" type="button">2.5D Pixel – Medium</button>
-                  <button data-value="high" type="button">2.5D Pixel – High</button>
+                  <button data-value="low" type="button">Atelier – Low</button>
+                  <button data-value="medium" type="button">Atelier – Medium</button>
+                  <button data-value="high" type="button">Atelier – High</button>
                 </div>
                 <small id="graphics-summary"></small>
               </section>
@@ -194,7 +194,7 @@ export class GameUI {
     this.elements.startButton.addEventListener('click', () => this.callbacks.onStart?.({ ...this.profile, name: this.elements.name.value.trim() || 'Gast' }));
     this.elements.settings.addEventListener('click', () => {
       const isClosed = this.elements.graphicsSettings.classList.toggle('hidden');
-      this.elements.menuMessage.textContent = isClosed ? 'Einstellungen geschlossen.' : 'Pixelmodus: klare Kanten, reduzierte Renderauflösung und bessere Performance.';
+      this.elements.menuMessage.textContent = isClosed ? 'Einstellungen geschlossen.' : 'Hauptmarkt-Test: handgemalte 2.5D-Materialien – ohne Bildschirmfilter.';
     });
     this.elements.credits.addEventListener('click', () => {
       this.elements.menuMessage.textContent = 'SKG · Auf der Suche nach dem Goldenen Viezporz · entwickelt für Trier.';
